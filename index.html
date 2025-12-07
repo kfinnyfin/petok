@@ -12,14 +12,18 @@
             --primary: #ff7b54;
             --primary-dark: #e06c4a;
             --secondary: #5030e5;
+            --secondary-light: #7c5eff;
             --bg-body: #111827;
             --bg-app: #ffffff;
             --text-main: #1f2937;
             --text-muted: #6b7280;
             --border: #e5e7eb;
-            --radius: 24px;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --radius: 20px;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
 
         body {
             background: var(--bg-body);
@@ -56,7 +60,7 @@
         }
 
         /* ============================
-           3. NAVIGATION & HEADER
+           3. HEADER
            ============================ */
         .header {
             padding: 15px 20px;
@@ -66,219 +70,178 @@
             background: #fff;
             border-bottom: 1px solid var(--border);
             z-index: 50;
+            flex-shrink: 0;
         }
-        .brand { font-size: 1.25rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
-        
+        .brand { font-size: 1.25rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        .brand-icon { font-size: 1.5rem; }
         .header-actions { display: flex; gap: 10px; }
         .btn-icon {
             width: 40px; height: 40px; border-radius: 50%; border: none;
             background: #f3f4f6; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; transition: background 0.2s;
+            font-size: 1.2rem; transition: all 0.2s;
         }
-        .btn-icon:hover { background: #e5e7eb; }
+        .btn-icon:hover { background: #e5e7eb; transform: scale(1.05); }
+        .btn-icon.active { background: var(--primary); color: white; }
 
         /* ============================
            4. SCREENS SYSTEM
            ============================ */
         .screen {
-            flex: 1;
-            display: none;
-            flex-direction: column;
-            overflow-y: auto;
-            position: relative;
-            background: #fff;
+            flex: 1; display: none; flex-direction: column; overflow-y: auto; position: relative; background: #fff;
         }
         .screen.active { display: flex; animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         /* ============================
-           5. EDITOR WORKSPACE
+           5. SCENE / STAGE COMPONENT (The Magic Fix)
            ============================ */
-        .workspace {
-            flex: 1;
-            background: #1a1a1a;
+        /* This generic class makes any container a "Pet Stage" */
+        .pet-stage {
+            width: 100%;
+            aspect-ratio: 1/1; /* Force Square Aspect Ratio */
+            background: #000;
             position: relative;
             overflow: hidden;
-            touch-action: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-
-        .canvas-area {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-
-        .photo-layer {
+        
+        .pet-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: contain; transform-origin: center; will-change: transform; cursor: grab;
+            pointer-events: none; /* Let clicks pass through by default */
         }
-        .photo-layer:active { cursor: grabbing; }
+        
+        /* Image Layer */
+        .stage-image {
+            width: 100%; height: 100%; object-fit: contain;
+            transform-origin: center; will-change: transform;
+        }
 
-        /* Mouth Guide */
-        .mouth-box {
-            position: absolute; top: 50%; left: 50%;
-            width: 120px; height: 60px;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(255, 255, 255, 0.6);
+        /* Mouth Guide Layer (Editor Only) */
+        .mouth-overlay {
+            position: absolute; 
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            background: rgba(255, 123, 84, 0.15);
             border-radius: 12px;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            z-index: 20; cursor: move;
-            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); /* Dim effect */
+            pointer-events: auto; /* Allow interaction */
+            cursor: move;
         }
-        .mouth-box::before {
-            content: 'MOUTH'; color: rgba(255,255,255,0.8);
-            font-size: 10px; font-weight: 700; letter-spacing: 1px; pointer-events: none;
-        }
-        .mouth-box.active {
-            border-color: var(--primary); border-width: 3px; background: rgba(255, 123, 84, 0.1);
+        .mouth-overlay::after {
+            content: 'MOUTH'; position: absolute; top: -20px; left: 0; width: 100%;
+            text-align: center; color: white; font-size: 10px; font-weight: bold;
+            text-shadow: 0 1px 2px #000;
         }
 
-        /* Props */
-        .prop {
-            position: absolute; font-size: 3rem; z-index: 30; cursor: grab; user-select: none;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); border: 2px solid transparent;
+        /* Prop Element */
+        .stage-prop {
+            position: absolute; font-size: 3rem; transform: translate(-50%, -50%);
+            cursor: grab; pointer-events: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
         }
-        .prop.active {
-            border: 2px dashed #fff; border-radius: 8px; background: rgba(0,0,0,0.2);
+        .stage-prop.selected { outline: 2px dashed #fff; background: rgba(255,255,255,0.1); border-radius: 8px; }
+
+        /* Result Animation Layers */
+        .anim-layer {
+            position: absolute; left: 0; width: 100%; 
+            overflow: hidden; pointer-events: none;
         }
+        /* Top Half */
+        .anim-head { top: 0; z-index: 2; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        /* Bottom Half */
+        .anim-jaw { z-index: 1; transform-origin: top center; }
+        
+        /* The animation */
+        @keyframes talk {
+            0% { transform: translateY(0) rotate(0deg); }
+            20% { transform: translateY(10%) rotate(-1deg); }
+            50% { transform: translateY(2%) rotate(0deg); }
+            70% { transform: translateY(12%) rotate(1deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        .talking .anim-jaw { animation: talk 0.2s infinite alternate ease-in-out; }
 
         /* ============================
-           6. EDITOR CONTROLS
+           6. UPLOAD SCREEN
            ============================ */
-        .editor-panel {
-            background: #fff; border-top: 1px solid var(--border);
-            display: flex; flex-direction: column; z-index: 60;
+        .upload-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .upload-area {
+            width: 100%; max-width: 300px; aspect-ratio: 1; border: 3px dashed var(--border); border-radius: 24px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f9fafb;
+            cursor: pointer; transition: all 0.3s; position: relative; margin-bottom: 30px;
         }
+        .upload-area:hover { border-color: var(--primary); background: #fff5f2; transform: scale(1.02); }
+        .upload-area input { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .upload-icon { font-size: 4rem; margin-bottom: 15px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        .tabs { display: flex; border-bottom: 1px solid #f3f4f6; }
-        .tab {
-            flex: 1; padding: 12px; text-align: center; font-size: 0.85rem; font-weight: 600;
-            color: var(--text-muted); cursor: pointer; position: relative;
+        /* ============================
+           7. EDITOR SCREEN
+           ============================ */
+        .editor-workspace {
+            flex: 1; background: #1a1a1a; display: flex; align-items: center; justify-content: center; padding: 20px;
         }
-        .tab.active { color: var(--primary); }
-        .tab.active::after {
-            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--primary);
-        }
+        .editor-controls { background: #fff; border-top: 1px solid var(--border); display: flex; flex-direction: column; z-index: 60; }
+        
+        /* Tabs */
+        .tabs { display: flex; background: #f9fafb; padding: 5px; margin: 10px; border-radius: 12px; }
+        .tab { flex: 1; padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-radius: 8px; }
+        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        .tools-area { padding: 20px; height: 160px; } /* Increased height for sliders */
-        .tool-group { display: none; height: 100%; flex-direction: column; gap: 12px; }
+        /* Tools */
+        .tools-area { padding: 15px; height: 160px; overflow-y: auto; }
+        .tool-group { display: none; height: 100%; flex-direction: column; gap: 15px; }
         .tool-group.active { display: flex; }
-
-        .control-row { display: flex; align-items: center; gap: 15px; font-size: 0.9rem; font-weight: 500; }
-        .control-row label { width: 60px; display: flex; justify-content: space-between; }
-        .val-badge { font-size: 0.75rem; color: var(--text-muted); font-weight: normal; }
         
-        input[type="range"] { flex: 1; accent-color: var(--primary); height: 6px; border-radius: 3px; }
-
-        .h-list { display: flex; gap: 10px; overflow-x: auto; padding: 4px; scrollbar-width: none; }
-        .h-list::-webkit-scrollbar { display: none; }
+        .control-row { display: flex; align-items: center; gap: 10px; }
+        .control-row label { width: 60px; font-size: 0.9rem; font-weight: 500; }
+        input[type="range"] { flex: 1; accent-color: var(--primary); }
         
-        .chip {
-            padding: 8px 16px; background: #f3f4f6; border-radius: 8px; font-size: 0.85rem;
-            white-space: nowrap; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;
-        }
-        .chip:hover { background: #e5e7eb; }
-        .chip.selected { background: var(--text-main); color: #fff; }
+        .chip-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .chip { padding: 6px 12px; background: #f3f4f6; border-radius: 20px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; border: 1px solid transparent; }
+        .chip.selected { background: var(--text-main); color: white; }
 
         .actions-bar { padding: 15px 20px; display: flex; gap: 12px; border-top: 1px solid #f3f4f6; }
 
         /* ============================
-           7. OTHER SCREENS UI
+           8. COMPOSE & RESULT
            ============================ */
-        .compose-container { padding: 30px 20px; flex: 1; display: flex; flex-direction: column; }
+        .compose-container { padding: 20px; flex: 1; display: flex; flex-direction: column; background: #f9fafb; }
         
-        textarea {
-            width: 100%; height: 120px; padding: 16px; border: 2px solid var(--border);
-            border-radius: 16px; font-size: 1.1rem; resize: none; font-family: inherit;
-            transition: border-color 0.2s;
+        /* Preview Boxes */
+        .preview-wrapper { 
+            width: 100%; max-width: 350px; margin: 0 auto 20px; 
+            border-radius: 20px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
         }
-        textarea:focus { outline: none; border-color: var(--primary); }
 
-        .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
-        .voice-card {
-            padding: 15px; border: 2px solid var(--border); border-radius: 12px;
-            text-align: center; cursor: pointer; transition: all 0.2s;
-        }
+        textarea { width: 100%; height: 100px; padding: 15px; border: 2px solid var(--border); border-radius: 16px; font-size: 1rem; resize: none; }
+        
+        .voice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 20px 0; }
+        .voice-card { padding: 15px; border: 2px solid var(--border); border-radius: 12px; text-align: center; cursor: pointer; }
         .voice-card.active { border-color: var(--secondary); background: #f5f3ff; color: var(--secondary); font-weight: bold; }
 
-        /* Animation Rig */
-        .stage {
-            width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 16px;
-            position: relative; overflow: hidden; margin-bottom: 20px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-        .rig-part { position: absolute; left: 0; width: 100%; overflow: hidden; pointer-events: none; }
-        .rig-head { top: 0; z-index: 2; }
-        .rig-jaw { z-index: 1; transform-origin: 50% 0%; }
+        /* Utils */
+        .btn-primary { padding: 16px; background: var(--primary); color: white; border: none; border-radius: 16px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; }
+        .btn-secondary { padding: 14px; background: #f3f4f6; color: var(--text-main); border: none; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; }
         
-        .rig-content {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        }
-        .rig-img {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: contain; transform-origin: center;
-        }
-
-        /* Animation */
-        @keyframes talk {
-            0% { transform: translateY(0) rotate(0deg); }
-            25% { transform: translateY(8%) rotate(-1deg); }
-            50% { transform: translateY(2%) rotate(0deg); }
-            75% { transform: translateY(12%) rotate(1deg); }
-            100% { transform: translateY(0) rotate(0deg); }
-        }
-        .talking .rig-jaw { animation: talk 0.2s infinite alternate; }
+        /* Helpers */
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #333; color: white; padding: 10px 20px; border-radius: 50px; z-index: 1000; transition: transform 0.3s; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .loading-overlay.active { display: flex; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite linear; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Profile & Gallery */
-        .profile-header {
-            text-align: center; background: #f9fafb; padding: 30px; border-radius: 20px; margin-bottom: 20px;
-        }
-        .stat-row { display: flex; justify-content: space-around; margin-top: 20px; }
-        .stat-box strong { display: block; font-size: 1.2rem; color: var(--text-main); }
-        .stat-box span { font-size: 0.8rem; color: var(--text-muted); }
-        
-        .menu-list { display: flex; flex-direction: column; gap: 10px; }
-        .menu-item {
-            padding: 16px; background: white; border: 1px solid var(--border); border-radius: 12px;
-            cursor: pointer; display: flex; justify-content: space-between; font-weight: 600;
-        }
-
-        .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 20px; }
-        .gallery-item {
-            aspect-ratio: 1; background: #eee; border-radius: 12px; overflow: hidden; position: relative;
-        }
-
-        /* Utils */
-        .btn-primary {
-            width: 100%; padding: 16px; background: var(--primary); color: #fff;
-            border: none; border-radius: 16px; font-size: 1rem; font-weight: 700;
-            cursor: pointer; transition: transform 0.1s;
-        }
-        .btn-primary:active { transform: scale(0.98); }
-        .btn-secondary {
-            flex: 1; padding: 14px; background: #f3f4f6; color: var(--text-main);
-            border: none; border-radius: 12px; font-weight: 600; cursor: pointer;
-        }
-        .upload-hero {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 3px dashed var(--border); border-radius: 24px; margin: 20px;
-            background: #f9fafb; cursor: pointer; transition: all 0.2s; position: relative;
-        }
-        .upload-hero:hover { border-color: var(--primary); background: #fff5f2; }
-        .upload-hero input { position: absolute; width:100%; height:100%; opacity:0; cursor:pointer; }
+        .profile-head { text-align: center; padding: 20px; background: #fff; border-radius: 20px; margin-bottom: 20px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .gallery-item { aspect-ratio: 1; background: #ddd; border-radius: 10px; overflow: hidden; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
         /* Filters */
-        .f-sepia { filter: sepia(0.6) contrast(1.2); }
-        .f-bw { filter: grayscale(1) contrast(1.1); }
-        .f-cool { filter: hue-rotate(160deg) saturate(1.2); }
-        .f-warm { filter: sepia(0.3) saturate(1.5); }
+        .filter-sepia { filter: sepia(0.6); }
+        .filter-bw { filter: grayscale(1); }
+        .filter-cool { filter: hue-rotate(180deg); }
+        .filter-warm { filter: sepia(0.3) saturate(1.5); }
 
     </style>
 </head>
@@ -288,35 +251,36 @@
     
     <!-- HEADER -->
     <header class="header">
-        <div class="brand">PetOK</div>
+        <div class="brand"><span class="brand-icon">🐶</span> PetOK</div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="nav('scr-gallery')">🎞️</button>
-            <button class="btn-icon" onclick="nav('scr-profile')">👤</button>
+            <button class="btn-icon" onclick="nav('gallery')">🎞️</button>
+            <button class="btn-icon" onclick="nav('profile')">👤</button>
         </div>
     </header>
 
-    <!-- 1. UPLOAD SCREEN -->
-    <div id="scr-upload" class="screen active">
-        <div style="padding: 30px 20px; text-align: center;">
-            <h1 style="margin-bottom: 10px;">Create a Clip</h1>
-            <p style="color:var(--text-muted);">Upload a photo to start animating.</p>
-        </div>
-        <div class="upload-hero">
-            <div style="font-size: 4rem; margin-bottom: 15px;">📸</div>
-            <h3 style="color:var(--text-main);">Tap to Upload</h3>
-            <input type="file" id="fileInput" accept="image/*">
+    <div class="toast" id="toast">Message</div>
+    <div class="loading-overlay" id="loader"><div class="spinner"></div><p>Processing...</p></div>
+
+    <!-- 1. UPLOAD -->
+    <div id="screen-upload" class="screen active">
+        <div class="upload-container">
+            <h1>Make Your Pet Talk</h1>
+            <p style="color:var(--text-muted); margin-bottom:30px;">Upload a photo to get started</p>
+            <div class="upload-area">
+                <div class="upload-icon">📸</div>
+                <h3>Tap to Upload</h3>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+            <button class="btn-secondary" onclick="loadSample()">Try Sample Image</button>
         </div>
     </div>
 
-    <!-- 2. ADVANCED EDITOR -->
-    <div id="scr-editor" class="screen">
-        <div class="workspace" id="workspace">
-            <div class="canvas-area">
-                <img id="editImg" class="photo-layer" src="" draggable="false">
-                <!-- Guide that user can drag -->
-                <div id="mouthGuide" class="mouth-box"></div>
-                <!-- Props Container -->
-                <div id="propsLayer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></div>
+    <!-- 2. EDITOR -->
+    <div id="screen-editor" class="screen">
+        <div class="editor-workspace">
+            <!-- THE MAIN STAGE -->
+            <div id="editorStage" class="pet-stage">
+                <!-- Content injected via JS renderPetScene() -->
             </div>
         </div>
 
@@ -324,427 +288,478 @@
             <div class="tabs">
                 <div class="tab active" onclick="setTab('photo')">Photo</div>
                 <div class="tab" onclick="setTab('mouth')">Mouth</div>
+                <div class="tab" onclick="setTab('filters')">Filters</div>
                 <div class="tab" onclick="setTab('props')">Props</div>
             </div>
 
             <div class="tools-area">
-                <!-- PHOTO TOOLS -->
+                <!-- PHOTO -->
                 <div id="tool-photo" class="tool-group active">
                     <div class="control-row">
                         <label>Zoom</label>
-                        <input type="range" id="zoomRange" min="0.5" max="3.0" step="0.1" value="1.0">
+                        <input type="range" id="zoomRange" min="0.5" max="3" step="0.1" value="1">
                     </div>
                     <div class="control-row">
-                        <label>Rotate <span id="rotVal" class="val-badge">0°</span></label>
+                        <label>Rotate</label>
                         <input type="range" id="rotRange" min="-180" max="180" step="1" value="0">
                     </div>
-                    <div class="h-list">
-                        <div class="chip selected" onclick="applyFilter('')">Normal</div>
-                        <div class="chip" onclick="applyFilter('f-sepia')">Vintage</div>
-                        <div class="chip" onclick="applyFilter('f-bw')">B&W</div>
-                        <div class="chip" onclick="applyFilter('f-cool')">Cool</div>
-                        <div class="chip" onclick="applyFilter('f-warm')">Warm</div>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button class="chip" onclick="resetTransform()">Reset</button>
                     </div>
                 </div>
-
-                <!-- MOUTH TOOLS -->
+                <!-- MOUTH -->
                 <div id="tool-mouth" class="tool-group">
-                    <p style="font-size:0.8rem; color:var(--text-muted); text-align:center;">
-                        Position the box over the jawline split.
-                    </p>
+                    <p style="font-size:0.8rem; text-align:center; color:var(--text-muted);">Drag box to mouth</p>
                     <div class="control-row">
                         <label>Width</label>
-                        <input type="range" id="mouthW" min="40" max="300" value="120">
+                        <input type="range" id="mouthW" min="50" max="250" value="120">
                     </div>
                     <div class="control-row">
                         <label>Height</label>
-                        <input type="range" id="mouthH" min="20" max="200" value="60">
+                        <input type="range" id="mouthH" min="20" max="150" value="60">
                     </div>
                 </div>
-
-                <!-- PROPS TOOLS -->
-                <div id="tool-props" class="tool-group">
-                    <div class="h-list" style="padding-bottom:15px;">
-                        <div class="chip" onclick="spawnProp('🕶️')">🕶️</div>
-                        <div class="chip" onclick="spawnProp('🎩')">🎩</div>
-                        <div class="chip" onclick="spawnProp('🎀')">🎀</div>
-                        <div class="chip" onclick="spawnProp('👑')">👑</div>
-                        <div class="chip" onclick="spawnProp('🎤')">🎤</div>
-                        <div class="chip" onclick="spawnProp('🦴')">🦴</div>
+                <!-- FILTERS -->
+                <div id="tool-filters" class="tool-group">
+                    <div class="chip-container">
+                        <div class="chip selected" onclick="setFilter('')">Normal</div>
+                        <div class="chip" onclick="setFilter('filter-sepia')">Vintage</div>
+                        <div class="chip" onclick="setFilter('filter-bw')">B&W</div>
+                        <div class="chip" onclick="setFilter('filter-cool')">Cool</div>
+                        <div class="chip" onclick="setFilter('filter-warm')">Warm</div>
                     </div>
-                    <div class="control-row">
+                </div>
+                <!-- PROPS -->
+                <div id="tool-props" class="tool-group">
+                    <div class="chip-container">
+                        <div class="chip" onclick="addProp('🕶️')">Glasses</div>
+                        <div class="chip" onclick="addProp('🎩')">Hat</div>
+                        <div class="chip" onclick="addProp('🎀')">Bow</div>
+                        <div class="chip" onclick="addProp('👑')">Crown</div>
+                        <div class="chip" onclick="addProp('🦴')">Bone</div>
+                    </div>
+                    <div class="control-row" style="margin-top:10px;">
                         <label>Size</label>
-                        <input type="range" id="propSize" min="1" max="6" step="0.1" value="3">
-                        <button onclick="deleteSelectedProp()" style="background:#fee2e2; color:red; border:none; padding:5px 12px; border-radius:6px; font-weight:bold;">Del</button>
+                        <input type="range" id="propSize" min="1" max="5" step="0.1" value="2">
+                        <button class="chip" style="background:#fee2e2; color:red;" onclick="delProp()">Del</button>
                     </div>
                 </div>
             </div>
 
             <div class="actions-bar">
-                <button class="btn-secondary" onclick="nav('scr-upload')">Back</button>
-                <button class="btn-primary" onclick="nav('scr-compose')">Next</button>
+                <button class="btn-secondary" onclick="nav('upload')">Back</button>
+                <button class="btn-primary" onclick="nav('compose')">Next</button>
             </div>
         </div>
     </div>
 
-    <!-- 3. COMPOSE SCREEN -->
-    <div id="scr-compose" class="screen">
+    <!-- 3. COMPOSE -->
+    <div id="screen-compose" class="screen">
         <div class="compose-container">
-            <h2 style="margin-bottom:10px;">Make them talk</h2>
-            <p style="color:var(--text-muted); margin-bottom:20px;">Enter text or use dictation.</p>
+            <div class="preview-wrapper">
+                <div id="composeStage" class="pet-stage"></div>
+            </div>
             
-            <textarea id="textInput" placeholder="I love treats!"></textarea>
-
-            <h4 style="margin:20px 0 10px;">Voice Style</h4>
+            <textarea id="textInput" placeholder="Type what your pet says..."></textarea>
+            
             <div class="voice-grid">
-                <div class="voice-card active" onclick="setVoice(1, this)">Friendly</div>
-                <div class="voice-card" onclick="setVoice(0.6, this)">Deep</div>
-                <div class="voice-card" onclick="setVoice(1.8, this)">Squeaky</div>
-                <div class="voice-card" onclick="setVoice(1.3, this)">Chirpy</div>
+                <div class="voice-card active" onclick="setVoice('friendly', this)">Friendly</div>
+                <div class="voice-card" onclick="setVoice('deep', this)">Deep</div>
+                <div class="voice-card" onclick="setVoice('squeaky', this)">Squeaky</div>
+                <div class="voice-card" onclick="setVoice('chirpy', this)">Chirpy</div>
             </div>
 
-            <div style="margin-top:auto; display:flex; gap:12px;">
-                <button class="btn-secondary" onclick="nav('scr-editor')">Edit</button>
+            <div style="margin-top:auto; display:flex; gap:10px;">
+                <button class="btn-secondary" onclick="nav('editor')">Edit</button>
                 <button class="btn-primary" onclick="generateVideo()">Generate</button>
             </div>
         </div>
     </div>
 
-    <!-- 4. RESULT SCREEN -->
-    <div id="scr-result" class="screen">
-        <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
-            <h2 style="text-align:center; margin-bottom:20px;">It's Alive!</h2>
-            
-            <!-- Animation Stage -->
-            <div class="stage" id="animStage">
-                <!-- Head Layer (Top) -->
-                <div class="rig-part rig-head" id="rigHead">
-                    <div class="rig-content" id="rHeadContent">
-                        <img class="rig-img" id="rHeadImg">
-                        <div id="rHeadProps"></div>
-                    </div>
-                </div>
-                <!-- Jaw Layer (Bottom) -->
-                <div class="rig-part rig-jaw" id="rigJaw">
-                    <div class="rig-content" id="rJawContent">
-                        <img class="rig-img" id="rJawImg">
-                        <div id="rJawProps"></div>
-                    </div>
+    <!-- 4. RESULT -->
+    <div id="screen-result" class="screen">
+        <div class="compose-container">
+            <h2 style="text-align:center; margin-bottom:10px;">It's Alive!</h2>
+            <div class="preview-wrapper">
+                <div id="resultStage" class="pet-stage">
+                    <!-- Head Layer -->
+                    <div class="anim-layer anim-head"></div>
+                    <!-- Jaw Layer -->
+                    <div class="anim-layer anim-jaw"></div>
                 </div>
             </div>
-
-            <button class="btn-primary" id="btnPlay" onclick="playAnim()">▶ Play Audio</button>
             
-            <div style="display:flex; gap:12px; margin-top:15px;">
-                <button class="btn-secondary" onclick="saveToGallery()">Save</button>
-                <button class="btn-secondary" onclick="nav('scr-upload')">New</button>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-primary" id="btnPlay" onclick="playAudio()">▶ Play</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-secondary" onclick="saveToGallery()">Save</button>
+                    <button class="btn-secondary" onclick="nav('upload')">New</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 5. PROFILE SCREEN -->
-    <div id="scr-profile" class="screen">
-        <div style="padding:20px;">
-            <h2>My Profile</h2>
-            <div class="profile-header">
-                <div style="font-size:3rem; margin-bottom:10px;">👤</div>
-                <h3>DogLover_99</h3>
-                <span style="background:var(--secondary); color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem;">Pro</span>
-                
-                <div class="stat-row">
-                    <div class="stat-box"><strong>12</strong><span>Videos</span></div>
-                    <div class="stat-box"><strong>1.2k</strong><span>Likes</span></div>
-                    <div class="stat-box"><strong>3</strong><span>Pets</span></div>
-                </div>
+    <!-- 5. PROFILE & GALLERY (Simulated) -->
+    <div id="screen-profile" class="screen">
+        <div class="compose-container">
+            <div class="profile-head">
+                <div style="font-size:3rem;">👤</div>
+                <h2>PetLover_1</h2>
+                <p>3 Videos Created</p>
             </div>
-
-            <div class="menu-list">
-                <div class="menu-item">Account Settings <span>›</span></div>
-                <div class="menu-item">Manage Subscription <span>›</span></div>
-                <div class="menu-item">Help Center <span>›</span></div>
-                <div class="menu-item" style="color:red; margin-top:20px;">Log Out</div>
-            </div>
-            
-            <button class="btn-secondary" style="margin-top:20px;" onclick="nav('scr-upload')">Close</button>
+            <button class="btn-secondary" onclick="nav('upload')">Close</button>
         </div>
     </div>
 
-    <!-- 6. GALLERY SCREEN -->
-    <div id="scr-gallery" class="screen">
-        <div style="padding:20px;">
+    <div id="screen-gallery" class="screen">
+        <div class="compose-container">
             <h2>Memories</h2>
-            <p style="color:var(--text-muted); margin-bottom:20px;">Your saved creations.</p>
-            <div id="galleryGrid" class="gallery-grid">
-                <!-- Items injected here -->
-            </div>
-            <button class="btn-secondary" onclick="nav('scr-upload')">Back</button>
+            <div id="galleryGrid" class="gallery-grid" style="margin:20px 0;"></div>
+            <button class="btn-secondary" onclick="nav('upload')">Back</button>
         </div>
     </div>
 
 </div>
 
 <script>
-    // === STATE ===
+    // --- STATE ---
     const state = {
-        img: { x: 0, y: 0, scale: 1, rot: 0, src: '' },
-        mouth: { x: 0, y: 0, w: 120, h: 60 },
-        props: [],
+        src: null,
+        imgX: 0, imgY: 0, scale: 1, rot: 0,
+        mouth: { x: 0, y: 0, w: 120, h: 60 }, // Offsets from center
+        props: [], // {id, char, x, y, size}
         filter: '',
-        voiceRate: 1,
-        activePropId: null
+        activeProp: null,
+        voice: 'friendly'
     };
 
-    // === NAVIGATION ===
+    // --- RENDER CORE (The Fix) ---
+    // This renders the pet state into ANY container (editor, preview, result)
+    // using percentages to ensure it scales perfectly.
+    function renderPetScene(containerId, isInteractive = false) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = ''; // Clear
+
+        // 1. Image Layer
+        const img = document.createElement('img');
+        img.src = state.src;
+        img.className = 'stage-image ' + state.filter;
+        // Transform: Note we use percentages if possible, but px is fine if container matches
+        // Since all containers are square (aspect-ratio: 1/1), we can use the same pixel offsets!
+        // But to be safe if sizes differ, we should use a scale factor.
+        // Let's assume the Editor is the "Source of Truth" (e.g. 1000 arbitrary units).
+        // Actually, simpler: Apply the transforms directly. CSS handles the visual scaling of the box.
+        // Wait, 'translate(50px)' is 50px on a small screen too. We need a scale factor.
+        
+        // Calculate Scale Factor based on visual width vs internal reference (let's say 350px reference)
+        const currentWidth = container.offsetWidth || 350; 
+        const baseWidth = 350; // Reference width from editor
+        const ratio = currentWidth / baseWidth;
+
+        img.style.transform = `translate(${state.imgX * ratio}px, ${state.imgY * ratio}px) scale(${state.scale}) rotate(${state.rot}deg)`;
+        container.appendChild(img);
+
+        // 2. Props Layer
+        state.props.forEach(p => {
+            const el = document.createElement('div');
+            el.className = 'stage-prop';
+            if(isInteractive && state.activeProp === p.id) el.classList.add('selected');
+            el.innerText = p.char;
+            
+            // Position: Center + Offset * Ratio
+            el.style.left = `calc(50% + ${p.x * ratio}px)`;
+            el.style.top = `calc(50% + ${p.y * ratio}px)`;
+            el.style.fontSize = `${p.size * ratio}rem`; // Scale text too
+            
+            if(isInteractive) {
+                el.onmousedown = (e) => { e.stopPropagation(); selectProp(p.id); };
+                el.ontouchstart = (e) => { e.stopPropagation(); selectProp(p.id); };
+            }
+            container.appendChild(el);
+        });
+
+        // 3. Interactive Layers (Editor Only)
+        if(isInteractive) {
+            // Mouth Guide
+            const m = document.createElement('div');
+            m.className = 'mouth-overlay';
+            m.id = 'mouthDrag';
+            m.style.width = (state.mouth.w * ratio) + 'px';
+            m.style.height = (state.mouth.h * ratio) + 'px';
+            m.style.left = `calc(50% + ${state.mouth.x * ratio}px)`;
+            m.style.top = `calc(50% + ${state.mouth.y * ratio}px)`;
+            m.style.transform = 'translate(-50%, -50%)'; // Center pivot
+            container.appendChild(m);
+        }
+        
+        return ratio; // Return ratio for external calculations if needed
+    }
+
+    // --- NAVIGATION ---
     function nav(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(screenId).classList.add('active');
-        if(screenId === 'scr-gallery') loadGallery();
+        document.getElementById('screen-' + screenId).classList.add('active');
+        
+        // Render triggers
+        if(screenId === 'editor') setTimeout(() => renderPetScene('editorStage', true), 50);
+        if(screenId === 'compose') setTimeout(() => renderPetScene('composeStage', false), 50);
+        if(screenId === 'gallery') loadGallery();
     }
 
-    function setTab(mode) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        const tabs = Array.from(document.querySelectorAll('.tab'));
-        tabs.find(t => t.innerText.toLowerCase() === mode).classList.add('active');
-
+    function setTab(t) {
         document.querySelectorAll('.tool-group').forEach(g => g.classList.remove('active'));
-        document.getElementById('tool-' + mode).classList.add('active');
-        document.getElementById('mouthGuide').classList.toggle('active', mode === 'mouth');
+        document.getElementById('tool-' + t).classList.add('active');
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        event.target.classList.add('active');
     }
 
-    // === UPLOAD ===
+    // --- UPLOAD ---
     const fileInput = document.getElementById('fileInput');
-    const editImg = document.getElementById('editImg');
-
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files[0]) {
+    fileInput.addEventListener('change', e => {
+        if(e.target.files[0]) {
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                state.img.src = evt.target.result;
-                editImg.src = state.img.src;
-                // Reset
-                state.img.x = 0; state.img.y = 0; state.img.scale = 1; state.img.rot = 0;
-                state.props = [];
-                renderProps();
-                updateImgTransform();
-                nav('scr-editor');
+            reader.onload = evt => {
+                state.src = evt.target.result;
+                resetState();
+                nav('editor');
             };
             reader.readAsDataURL(e.target.files[0]);
         }
     });
 
-    // === EDITOR INTERACTION ===
-    const workspace = document.getElementById('workspace');
-    const mouthGuide = document.getElementById('mouthGuide');
-    let isDragging = false, dragTarget = null, startPos = {x:0,y:0}, initPos = {x:0,y:0};
+    function loadSample() {
+        // Use a placeholder or draw a canvas
+        const c = document.createElement('canvas'); c.width=400; c.height=400;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = "#8B5CF6"; ctx.fillRect(0,0,400,400);
+        ctx.font="150px Arial"; ctx.textAlign="center"; ctx.fillText("🐶",200,220);
+        state.src = c.toDataURL();
+        resetState();
+        nav('editor');
+    }
 
-    workspace.addEventListener('mousedown', dragStart);
-    workspace.addEventListener('touchstart', dragStart, {passive:false});
-    window.addEventListener('mousemove', dragMove);
-    window.addEventListener('touchmove', dragMove, {passive:false});
-    window.addEventListener('mouseup', dragEnd);
-    window.addEventListener('touchend', dragEnd);
+    function resetState() {
+        state.imgX=0; state.imgY=0; state.scale=1; state.rot=0;
+        state.mouth={x:0, y:0, w:120, h:60};
+        state.props=[];
+        state.filter='';
+        // Reset Sliders
+        document.getElementById('zoomRange').value = 1;
+        document.getElementById('rotRange').value = 0;
+    }
 
-    function dragStart(e) {
-        const touch = e.touches ? e.touches[0] : e;
-        const target = e.target;
-        startPos = { x: touch.clientX, y: touch.clientY };
+    // --- EDITOR LOGIC ---
+    let dragItem = null; // 'image', 'mouth', propId
+    let startPos = {x:0, y:0};
+    
+    const stage = document.getElementById('editorStage');
+    
+    stage.addEventListener('mousedown', startDrag);
+    stage.addEventListener('touchstart', startDrag, {passive:false});
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('touchmove', drag, {passive:false});
+    window.addEventListener('mouseup', () => dragItem = null);
+    window.addEventListener('touchend', () => dragItem = null);
 
-        if (target.classList.contains('mouth-box')) {
-            dragTarget = 'mouth';
-            initPos = { x: state.mouth.x, y: state.mouth.y };
-            setTab('mouth');
-        } else if (target.classList.contains('prop')) {
-            const id = parseInt(target.dataset.id);
-            dragTarget = 'prop-' + id;
-            selectProp(id);
-            const prop = state.props.find(p => p.id === id);
-            initPos = { x: prop.x, y: prop.y };
-            setTab('props');
-        } else {
-            dragTarget = 'image';
-            initPos = { x: state.img.x, y: state.img.y };
-            setTab('photo');
+    function startDrag(e) {
+        if(!state.src) return;
+        const t = e.target;
+        const pt = e.touches ? e.touches[0] : e;
+        startPos = { x: pt.clientX, y: pt.clientY };
+
+        if(t.classList.contains('mouth-overlay')) dragItem = 'mouth';
+        else if(t.id === 'editorStage' || t.classList.contains('stage-image')) dragItem = 'image';
+        
+        // Props selection handled in render loop via onclick
+    }
+
+    function drag(e) {
+        if(!dragItem) return;
+        if(e.cancelable) e.preventDefault();
+        const pt = e.touches ? e.touches[0] : e;
+        
+        // Calculate Delta (Raw Pixels)
+        const dx = pt.clientX - startPos.x;
+        const dy = pt.clientY - startPos.y;
+        startPos = { x: pt.clientX, y: pt.clientY };
+
+        // We need to invert the "Ratio" used in render to store "Base Units"
+        // render used: currentWidth / 350.
+        const currentW = stage.offsetWidth;
+        const ratio = currentW / 350; // This is the visual scale factor
+        
+        // Convert screen pixels to "State Units"
+        const stateDx = dx / ratio;
+        const stateDy = dy / ratio;
+
+        if(dragItem === 'image') {
+            state.imgX += stateDx;
+            state.imgY += stateDy;
+        } else if(dragItem === 'mouth') {
+            state.mouth.x += stateDx;
+            state.mouth.y += stateDy;
+        } else if(typeof dragItem === 'number') {
+            const p = state.props.find(i => i.id === dragItem);
+            if(p) { p.x += stateDx; p.y += stateDy; }
         }
-        isDragging = true;
+
+        renderPetScene('editorStage', true);
     }
 
-    function dragMove(e) {
-        if (!isDragging) return;
-        if(e.type === 'touchmove') e.preventDefault();
-        const touch = e.touches ? e.touches[0] : e;
-        const dx = touch.clientX - startPos.x;
-        const dy = touch.clientY - startPos.y;
-
-        if (dragTarget === 'image') {
-            state.img.x = initPos.x + dx;
-            state.img.y = initPos.y + dy;
-            updateImgTransform();
-        } else if (dragTarget === 'mouth') {
-            state.mouth.x = initPos.x + dx;
-            state.mouth.y = initPos.y + dy;
-            updateMouthTransform();
-        } else if (dragTarget.startsWith('prop-')) {
-            const id = parseInt(dragTarget.split('-')[1]);
-            const prop = state.props.find(p => p.id === id);
-            if(prop) { prop.x = initPos.x + dx; prop.y = initPos.y + dy; renderProps(); }
-        }
-    }
-    function dragEnd() { isDragging = false; dragTarget = null; }
-
-    // === TRANSFORMS ===
-    function updateImgTransform() {
-        editImg.style.transform = `translate(${state.img.x}px, ${state.img.y}px) scale(${state.img.scale}) rotate(${state.img.rot}deg)`;
-    }
-    function updateMouthTransform() {
-        mouthGuide.style.transform = `translate(calc(-50% + ${state.mouth.x}px), calc(-50% + ${state.mouth.y}px))`;
-        mouthGuide.style.width = state.mouth.w + 'px';
-        mouthGuide.style.height = state.mouth.h + 'px';
-    }
-
-    // === CONTROLS ===
-    document.getElementById('zoomRange').addEventListener('input', e => {
-        state.img.scale = e.target.value; updateImgTransform();
-    });
-    document.getElementById('rotRange').addEventListener('input', e => {
-        state.img.rot = e.target.value; 
-        document.getElementById('rotVal').innerText = state.img.rot + '°';
-        updateImgTransform();
-    });
-    function applyFilter(cls) {
-        state.filter = cls;
-        editImg.className = 'photo-layer ' + cls;
-    }
-
-    // Mouth
-    document.getElementById('mouthW').addEventListener('input', e => { state.mouth.w = e.target.value; updateMouthTransform(); });
-    document.getElementById('mouthH').addEventListener('input', e => { state.mouth.h = e.target.value; updateMouthTransform(); });
-
+    // --- TOOLBAR BINDINGS ---
+    // Sliders
+    document.getElementById('zoomRange').oninput = e => { state.scale = e.target.value; renderPetScene('editorStage', true); };
+    document.getElementById('rotRange').oninput = e => { state.rot = e.target.value; renderPetScene('editorStage', true); };
+    document.getElementById('mouthW').oninput = e => { state.mouth.w = e.target.value; renderPetScene('editorStage', true); };
+    document.getElementById('mouthH').oninput = e => { state.mouth.h = e.target.value; renderPetScene('editorStage', true); };
+    
     // Props
-    let propIdCounter = 0;
-    function spawnProp(char) {
-        const newProp = { id: ++propIdCounter, char: char, x: 0, y: 0, size: 3 };
-        state.props.push(newProp);
-        renderProps(); selectProp(newProp.id);
-    }
-    function renderProps() {
-        const container = document.getElementById('propsLayer');
-        container.innerHTML = '';
-        state.props.forEach(p => {
-            const el = document.createElement('div');
-            el.className = `prop ${state.activePropId === p.id ? 'active' : ''}`;
-            el.innerText = p.char; el.dataset.id = p.id;
-            el.style.left = '50%'; el.style.top = '50%';
-            el.style.transform = `translate(calc(-50% + ${p.x}px), calc(-50% + ${p.y}px))`;
-            el.style.fontSize = p.size + 'rem';
-            el.style.pointerEvents = 'auto';
-            container.appendChild(el);
-        });
+    function addProp(char) {
+        const id = Date.now();
+        state.props.push({ id, char, x:0, y:0, size:2 });
+        selectProp(id);
     }
     function selectProp(id) {
-        state.activePropId = id;
-        const prop = state.props.find(p => p.id === id);
-        if(prop) document.getElementById('propSize').value = prop.size;
-        renderProps();
+        state.activeProp = id;
+        dragItem = id; // Start dragging immediately
+        const p = state.props.find(i => i.id === id);
+        if(p) document.getElementById('propSize').value = p.size;
+        renderPetScene('editorStage', true);
+        setTab('props');
     }
-    document.getElementById('propSize').addEventListener('input', e => {
-        if(state.activePropId) {
-            const prop = state.props.find(p => p.id === state.activePropId);
-            if(prop) { prop.size = e.target.value; renderProps(); }
-        }
-    });
-    function deleteSelectedProp() {
-        if(state.activePropId) {
-            state.props = state.props.filter(p => p.id !== state.activePropId);
-            state.activePropId = null; renderProps();
-        }
+    document.getElementById('propSize').oninput = e => {
+        const p = state.props.find(i => i.id === state.activeProp);
+        if(p) { p.size = e.target.value; renderPetScene('editorStage', true); }
+    };
+    function delProp() {
+        state.props = state.props.filter(i => i.id !== state.activeProp);
+        renderPetScene('editorStage', true);
+    }
+    
+    function setFilter(f) { state.filter = f; renderPetScene('editorStage', true); }
+    function resetTransform() { 
+        state.imgX=0; state.imgY=0; state.scale=1; state.rot=0; 
+        document.getElementById('zoomRange').value=1;
+        document.getElementById('rotRange').value=0;
+        renderPetScene('editorStage', true); 
     }
 
-    // === COMPOSE ===
-    function setVoice(rate, el) {
-        state.voiceRate = rate;
+    // --- COMPOSE ---
+    function setVoice(v, el) {
+        state.voice = v;
         document.querySelectorAll('.voice-card').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
     }
 
-    // === GENERATE & PLAYBACK ===
+    // --- GENERATE (RESULT) ---
     function generateVideo() {
-        const text = document.getElementById('textInput').value;
-        if(!text) return alert("Please type something!");
-
-        // 1. Calculate Split Percentage relative to the canvas
-        const containerH = document.querySelector('.canvas-area').offsetHeight;
-        const boxCenterY = (containerH / 2) + state.mouth.y;
+        const txt = document.getElementById('textInput').value;
+        if(!txt) { showToast("Please type something!", "error"); return; }
         
-        // 2. Setup Head Layer (Clips Bottom)
-        const rigHead = document.getElementById('rigHead');
-        const rHeadContent = document.getElementById('rHeadContent');
-        const rHeadImg = document.getElementById('rHeadImg');
-        const rHeadProps = document.getElementById('rHeadProps');
+        document.getElementById('loader').classList.add('active');
         
-        rigHead.style.height = boxCenterY + 'px';
-        rHeadContent.style.height = containerH + 'px'; // Full height container inside clipped parent
-        
-        rHeadImg.src = state.img.src;
-        rHeadImg.className = 'rig-img ' + state.filter;
-        rHeadImg.style.transform = editImg.style.transform;
-        
-        // Clone props to head
-        rHeadProps.innerHTML = document.getElementById('propsLayer').innerHTML;
-        
-        // 3. Setup Jaw Layer (Clips Top)
-        const rigJaw = document.getElementById('rigJaw');
-        const rJawContent = document.getElementById('rJawContent');
-        const rJawImg = document.getElementById('rJawImg');
-        const rJawProps = document.getElementById('rJawProps');
-        
-        rigJaw.style.top = boxCenterY + 'px';
-        rigJaw.style.height = (containerH - boxCenterY) + 'px';
-        
-        rJawContent.style.height = containerH + 'px';
-        rJawContent.style.top = -boxCenterY + 'px'; // Shift content up to align
-        
-        rJawImg.src = state.img.src;
-        rJawImg.className = 'rig-img ' + state.filter;
-        rJawImg.style.transform = editImg.style.transform;
-
-        // Clone props to jaw
-        rJawProps.innerHTML = document.getElementById('propsLayer').innerHTML;
-
-        nav('scr-result');
+        setTimeout(() => {
+            document.getElementById('loader').classList.remove('active');
+            nav('result');
+            setupAnimation();
+        }, 1500);
     }
 
-    function playAnim() {
-        const text = document.getElementById('textInput').value;
-        const stage = document.getElementById('animStage');
-        stage.classList.add('talking');
-        const u = new SpeechSynthesisUtterance(text);
-        u.pitch = state.voiceRate > 1.0 ? 1.5 : (state.voiceRate < 1.0 ? 0.6 : 1);
-        u.rate = 1.0;
-        u.onend = () => stage.classList.remove('talking');
+    function setupAnimation() {
+        // Here we duplicate the render logic but into TWO layers (Head/Jaw)
+        // using clip-paths to split them based on state.mouth position.
+        
+        const container = document.getElementById('resultStage');
+        // We use the same render logic to populate the layers
+        // BUT we need to clone the DOM or re-run render logic for each layer?
+        // Simpler: Render a "Master" stage then clone it into Head/Jaw divs? 
+        // No, `renderPetScene` targets an ID.
+        
+        // 1. Render Full Scene into Head Layer
+        const headLayer = container.querySelector('.anim-head');
+        // We need a wrapper inside to render into
+        let headContent = document.createElement('div'); 
+        headContent.id = 'animHeadTarget'; 
+        headContent.style.width='100%'; headContent.style.height='100%';
+        headLayer.innerHTML = ''; headLayer.appendChild(headContent);
+        
+        // Render
+        const ratio = renderPetScene('animHeadTarget', false);
+        
+        // 2. Clone it for Jaw
+        const jawLayer = container.querySelector('.anim-jaw');
+        jawLayer.innerHTML = headLayer.innerHTML; // Exact copy
+        
+        // 3. Calculate Split Percentage
+        // Mouth Y is offset from center (0). 
+        // In the stage, center is 50%.
+        // Offset in pixels = state.mouth.y * ratio.
+        // Stage Height in pixels = container.offsetHeight.
+        const h = container.offsetHeight;
+        const splitPx = (h/2) + (state.mouth.y * ratio);
+        const splitPct = (splitPx / h) * 100;
+        
+        // 4. Apply Masks
+        // Head: Visible from 0% to splitPct%
+        headLayer.style.clipPath = `inset(0 0 ${100 - splitPct}% 0)`;
+        
+        // Jaw: Visible from splitPct% to 100%
+        jawLayer.style.clipPath = `inset(${splitPct}% 0 0 0)`;
+        
+        // 5. Pivot
+        jawLayer.style.transformOrigin = `50% ${splitPct}%`;
+    }
+
+    function playAudio() {
+        const btn = document.getElementById('btnPlay');
+        const jaw = document.querySelector('.anim-jaw');
+        
+        jaw.parentElement.classList.add('talking');
+        btn.innerText = "Playing...";
+        
+        const u = new SpeechSynthesisUtterance(document.getElementById('textInput').value);
+        
+        // Tuned Voice Settings
+        if(state.voice === 'friendly') { u.pitch = 1.1; u.rate = 1.0; }
+        if(state.voice === 'deep') { u.pitch = 0.4; u.rate = 0.8; }
+        if(state.voice === 'squeaky') { u.pitch = 2.0; u.rate = 1.1; }
+        if(state.voice === 'chirpy') { u.pitch = 1.6; u.rate = 1.4; }
+        
+        u.onend = () => {
+            jaw.parentElement.classList.remove('talking');
+            btn.innerText = "▶ Play";
+        };
         window.speechSynthesis.speak(u);
     }
 
-    // === GALLERY ===
-    function saveToGallery() {
-        const item = { src: state.img.src, date: new Date().toLocaleDateString() };
-        let history = JSON.parse(localStorage.getItem('petok_memories') || '[]');
-        history.unshift(item);
-        localStorage.setItem('petok_memories', JSON.stringify(history));
-        alert("Saved to Memories!");
-    }
-    function loadGallery() {
-        const grid = document.getElementById('galleryGrid');
-        grid.innerHTML = '';
-        const history = JSON.parse(localStorage.getItem('petok_memories') || '[]');
-        if(history.length === 0) grid.innerHTML = '<p style="color:#999; grid-column:span 2; text-align:center;">No videos yet.</p>';
-        history.forEach(item => {
-            const el = document.createElement('div');
-            el.className = 'gallery-item';
-            el.innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover;">`;
-            grid.appendChild(el);
-        });
+    // --- HELPERS ---
+    function showToast(msg, type='success') {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.className = 'toast show ' + type;
+        setTimeout(() => t.className = 'toast', 3000);
     }
 
+    function saveToGallery() {
+        const gal = document.getElementById('galleryGrid');
+        const div = document.createElement('div');
+        div.className = 'gallery-item';
+        div.innerHTML = `<img src="${state.src}" style="width:100%; height:100%; object-fit:cover;">`;
+        if(gal.children.length === 0) gal.innerHTML = '';
+        gal.prepend(div);
+        showToast("Saved to Memories!");
+    }
+    
+    function loadGallery() {
+        const gal = document.getElementById('galleryGrid');
+        if(gal.children.length === 0) gal.innerHTML = '<p style="color:#999; grid-column:span 3; text-align:center; padding:20px;">No videos yet.</p>';
+    }
+
+    // Init
+    loadGallery();
+
 </script>
+<!-- Screenshot Tool -->
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </body>
 </html>
